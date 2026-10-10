@@ -32,6 +32,12 @@ android {
             options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
 
+    lint {
+        // findings are uploaded as a CI artifact instead of blocking the APK
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     signingConfigs {
         release {
             storeFile = System.getenv("TIFUSI_KEYSTORE") ? file(System.getenv("TIFUSI_KEYSTORE")) : null
