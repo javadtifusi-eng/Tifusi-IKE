@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/tifusi_label"
+        android:pathData="M12,2C7.58,2 4,3.79 4,6v12c0,2.21 3.58,4 8,4s8,-1.79 8,-4V6C20,3.79 16.42,2 12,2zM12,4c3.87,0 6,1.5 6,2s-2.13,2 -6,2S6,6.5 6,6S8.13,4 12,4zM18,18c0,0.5 -2.13,2 -6,2s-6,-1.5 -6,-2v-2.23C7.61,16.55 9.72,17 12,17s4.39,-0.45 6,-1.23V18zM18,13c0,0.5 -2.13,2 -6,2s-6,-1.5 -6,-2v-2.23C7.61,11.55 9.72,12 12,12s4.39,-0.45 6,-1.23V13z" />
+</vector>

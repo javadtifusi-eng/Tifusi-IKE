@@ -55,6 +55,10 @@ public class TifusiSubscription
 	private static final String KEY_LINK = "link";
 	private static final String KEY_PROFILE = "profile_uuid";
 	private static final String KEY_BACKUPS = "backup_domains";
+	private static final String KEY_USERNAME = "username";
+	private static final String KEY_EXPIRE = "expire";
+	private static final String KEY_USED = "used_traffic";
+	private static final String KEY_LIMIT = "data_limit";
 	private static final int TIMEOUT_MS = 15000;
 
 	private static final Pattern LINK = Pattern.compile(
@@ -69,6 +73,28 @@ public class TifusiSubscription
 		UNREACHABLE,
 		NOT_FOUND,
 		NO_IKEV2,
+	}
+
+	/** What the card shows about the account, as of the last successful refresh. */
+	public static class Account
+	{
+		public String username;
+		/** seconds since the epoch, 0 for no expiry */
+		public long expire;
+		public long used;
+		/** bytes, 0 for unlimited */
+		public long limit;
+	}
+
+	public static Account savedAccount(Context context)
+	{
+		SharedPreferences prefs = prefs(context);
+		Account account = new Account();
+		account.username = prefs.getString(KEY_USERNAME, "");
+		account.expire = prefs.getLong(KEY_EXPIRE, 0);
+		account.used = prefs.getLong(KEY_USED, 0);
+		account.limit = prefs.getLong(KEY_LIMIT, 0);
+		return account;
 	}
 
 	public static class SubscriptionException extends Exception
@@ -148,6 +174,10 @@ public class TifusiSubscription
 		edit.putString(KEY_LINK, moved != null ? moved : canonical);
 		JSONArray backups = config.optJSONArray("backup_domains");
 		edit.putString(KEY_BACKUPS, backups != null ? backups.toString() : "[]");
+		edit.putString(KEY_USERNAME, config.optString("username", server.optString("username")));
+		edit.putLong(KEY_EXPIRE, config.optLong("expire", 0));
+		edit.putLong(KEY_USED, config.optLong("used_traffic", 0));
+		edit.putLong(KEY_LIMIT, config.optLong("data_limit", 0));
 
 		VpnProfileDataSource source = new VpnProfileSource(context).open();
 		try

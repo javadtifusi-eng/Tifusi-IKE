@@ -25,7 +25,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import com.journeyapps.barcodescanner.ScanContract;
@@ -34,11 +33,13 @@ import com.journeyapps.barcodescanner.ScanOptions;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.TifusiSubscription;
+import org.strongswan.android.logic.TifusiSubscription.Account;
 import org.strongswan.android.logic.TifusiSubscription.SubscriptionException;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,7 +55,11 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 	private final Handler mHandler = new Handler(Looper.getMainLooper());
 	private VpnStateService mService;
-	private Button mPower;
+	private View mPower;
+	private View mCard;
+	private TextView mUser;
+	private TextView mDays;
+	private TextView mData;
 	private TextView mStatus;
 	private View mSetup;
 	private boolean mBusy;
@@ -91,6 +96,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		mPower = findViewById(R.id.tifusi_power);
 		mStatus = findViewById(R.id.tifusi_status);
 		mSetup = findViewById(R.id.tifusi_setup);
+		mCard = findViewById(R.id.tifusi_card);
+		mUser = findViewById(R.id.tifusi_user);
+		mDays = findViewById(R.id.tifusi_days);
+		mData = findViewById(R.id.tifusi_data);
 
 		mPower.setOnClickListener(v -> toggle());
 		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());
@@ -232,12 +241,13 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	{
 		boolean ready = TifusiSubscription.savedLink(this) != null;
 		mSetup.setVisibility(ready ? View.GONE : View.VISIBLE);
-		mPower.setVisibility(ready ? View.VISIBLE : View.GONE);
+		mCard.setVisibility(ready ? View.VISIBLE : View.GONE);
 		if (!ready)
 		{
 			mStatus.setText(R.string.tifusi_first_scan);
 			return;
 		}
+		renderAccount();
 		State state = mService != null ? mService.getState() : State.DISABLED;
 		ErrorState error = mService != null ? mService.getErrorState() : ErrorState.NO_ERROR;
 		mPower.setActivated(state == State.CONNECTED);
@@ -245,21 +255,58 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		switch (state)
 		{
 			case CONNECTED:
-				mPower.setText(R.string.tifusi_on);
 				mStatus.setText(R.string.tifusi_connected);
 				break;
 			case CONNECTING:
-				mPower.setText(R.string.tifusi_wait);
 				mStatus.setText(error != ErrorState.NO_ERROR ? R.string.tifusi_retrying : R.string.tifusi_connecting);
 				break;
 			case DISCONNECTING:
-				mPower.setText(R.string.tifusi_wait);
 				mStatus.setText(R.string.tifusi_disconnecting);
 				break;
 			default:
-				mPower.setText(R.string.tifusi_off);
 				mStatus.setText(error == ErrorState.AUTH_FAILED ? R.string.tifusi_err_auth :
 								error != ErrorState.NO_ERROR ? R.string.tifusi_err_connect : R.string.tifusi_disconnected);
+		}
+	}
+
+	private void renderAccount()
+	{
+		Account account = TifusiSubscription.savedAccount(this);
+		mUser.setText(account.username);
+		if (account.expire <= 0)
+		{
+			mDays.setText(R.string.tifusi_no_expiry);
+		}
+		else
+		{
+			long left = account.expire - System.currentTimeMillis() / 1000;
+			long days = (left + 86399) / 86400;
+			if (left <= 0)
+			{
+				mDays.setText(R.string.tifusi_expired);
+			}
+			else if (left < 86400)
+			{
+				mDays.setText(R.string.tifusi_last_day);
+			}
+			else if (days == 1)
+			{
+				mDays.setText(R.string.tifusi_one_day_left);
+			}
+			else
+			{
+				mDays.setText(getString(R.string.tifusi_days_left, (int)days));
+			}
+		}
+		if (account.limit <= 0)
+		{
+			mData.setText(R.string.tifusi_unlimited);
+		}
+		else
+		{
+			/* the panel counts a GB as 1024^3 bytes */
+			double left = Math.max(0, account.limit - account.used) / (1024.0 * 1024 * 1024);
+			mData.setText(getString(R.string.tifusi_gb_left, String.format(Locale.US, "%.2f", left)));
 		}
 	}
 }

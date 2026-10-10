@@ -2,23 +2,110 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/tifusi_bg"
+    android:background="@drawable/tifusi_screen_bg"
     android:fitsSystemWindows="true"
-    android:gravity="center"
+    android:gravity="center_horizontal"
+    android:layoutDirection="ltr"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="20dp">
 
-    <Button
-        android:id="@+id/tifusi_power"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:background="@drawable/tifusi_power"
-        android:textColor="@android:color/white"
-        android:textSize="34sp"
-        android:textStyle="bold"
-        android:stateListAnimator="@null"
-        android:text="@string/tifusi_off" />
+    <ImageView
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@null"
+        android:src="@drawable/tifusi_header" />
 
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- after the first scan: power button and the account -->
+    <LinearLayout
+        android:id="@+id/tifusi_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/tifusi_card"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="18dp">
+
+        <FrameLayout
+            android:id="@+id/tifusi_power"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@drawable/tifusi_power"
+            android:clickable="true"
+            android:contentDescription="@string/tifusi_disconnected"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/tifusi_power_icon" />
+        </FrameLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="96dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="#551E9BFF" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.1"
+                android:text="@string/tifusi_user_label"
+                android:textColor="@color/tifusi_label"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tifusi_user"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/tifusi_text"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tifusi_days"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:drawableStart="@drawable/tifusi_ic_calendar"
+                android:drawablePadding="8dp"
+                android:gravity="center_vertical"
+                android:textColor="@color/tifusi_info"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tifusi_data"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:drawableStart="@drawable/tifusi_ic_data"
+                android:drawablePadding="8dp"
+                android:gravity="center_vertical"
+                android:textColor="@color/tifusi_info"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- before the first scan -->
     <LinearLayout
         android:id="@+id/tifusi_setup"
         android:layout_width="match_parent"
@@ -30,7 +117,8 @@
             android:id="@+id/tifusi_scan"
             android:layout_width="match_parent"
             android:layout_height="64dp"
-            android:backgroundTint="@color/tifusi_on"
+            android:backgroundTint="@color/tifusi_glow"
+            android:textAllCaps="false"
             android:textColor="@android:color/white"
             android:textSize="20sp"
             android:text="@string/tifusi_scan" />
@@ -41,6 +129,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:textAllCaps="false"
             android:textColor="@color/tifusi_text_dim"
             android:text="@string/tifusi_paste" />
     </LinearLayout>
@@ -49,9 +138,14 @@
         android:id="@+id/tifusi_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="20dp"
         android:gravity="center"
         android:minHeight="48dp"
         android:textColor="@color/tifusi_text"
-        android:textSize="18sp" />
+        android:textSize="17sp" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 </LinearLayout>
