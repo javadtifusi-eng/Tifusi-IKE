@@ -6,7 +6,7 @@ android {
     defaultConfig {
         applicationId "com.tifusi.ike"
         compileSdk = 36
-        minSdkVersion 24
+        minSdkVersion 21
         targetSdkVersion 36
 
         versionCode 1
@@ -63,7 +63,9 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'com.google.android.material:material:1.13.0'
-    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    // zxing core 3.3.0 keeps the scanner working below API 24 (the native code is built for API 21)
+    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
+    implementation 'com.google.zxing:core:3.3.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.assertj:assertj-core:3.27.6'
     testImplementation 'org.mockito:mockito-core:5.20.0'
