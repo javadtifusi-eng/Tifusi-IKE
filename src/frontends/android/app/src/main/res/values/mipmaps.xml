@@ -15,6 +15,6 @@
     for more details.
 -->
 <resources>
-    <mipmap name="ic_launcher">@mipmap/ic_app</mipmap>
+    <mipmap name="ic_launcher">@drawable/tifusi_launcher_legacy</mipmap>
     <mipmap name="ic_shortcut">@mipmap/ic_app</mipmap>
 </resources>

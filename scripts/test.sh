@@ -566,8 +566,8 @@ apidoc)
 android)
 	rm -r strongswan-*
 	cd $SRC_DIR/src/frontends/android
-	echo "$ ./gradlew build"
-	NDK_CCACHE=ccache ./gradlew build --info || exit $?
+	echo "$ ./gradlew assembleRelease"
+	NDK_CCACHE=ccache ./gradlew assembleRelease || exit $?
 	;;
 *)
 	;;

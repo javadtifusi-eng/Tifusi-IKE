@@ -1,0 +1,265 @@
+/*
+ * Copyright (C) 2026 Tifusi
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+package org.strongswan.android.ui;
+
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+
+import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.TifusiSubscription;
+import org.strongswan.android.logic.TifusiSubscription.SubscriptionException;
+import org.strongswan.android.logic.VpnStateService;
+import org.strongswan.android.logic.VpnStateService.ErrorState;
+import org.strongswan.android.logic.VpnStateService.State;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.appcompat.app.AppCompatActivity;
+
+/**
+ * The whole app: scan the panel's subscription QR code once, then one button to turn the VPN on
+ * and off. Everything else strongSwan offers stays out of sight.
+ */
+public class TifusiActivity extends AppCompatActivity implements VpnStateService.VpnStateListener
+{
+	private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+	private final Handler mHandler = new Handler(Looper.getMainLooper());
+	private VpnStateService mService;
+	private Button mPower;
+	private TextView mStatus;
+	private View mSetup;
+	private boolean mBusy;
+
+	private final ServiceConnection mServiceConnection = new ServiceConnection()
+	{
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service)
+		{
+			mService = ((VpnStateService.LocalBinder)service).getService();
+			mService.registerListener(TifusiActivity.this);
+			render();
+		}
+
+		@Override
+		public void onServiceDisconnected(ComponentName name)
+		{
+			mService = null;
+		}
+	};
+
+	private final ActivityResultLauncher<ScanOptions> mScan = registerForActivityResult(new ScanContract(), result -> {
+		if (result.getContents() != null)
+		{
+			importLink(result.getContents());
+		}
+	});
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.tifusi_activity);
+		mPower = findViewById(R.id.tifusi_power);
+		mStatus = findViewById(R.id.tifusi_status);
+		mSetup = findViewById(R.id.tifusi_setup);
+
+		mPower.setOnClickListener(v -> toggle());
+		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());
+		findViewById(R.id.tifusi_paste).setOnClickListener(v -> paste());
+		/* a new subscription replaces the old one: long-press the status line */
+		mStatus.setOnLongClickListener(v -> {
+			scan();
+			return true;
+		});
+
+		bindService(new Intent(this, VpnStateService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		render();
+		/* pick up a changed password or server quietly, but never mid-connection */
+		String link = TifusiSubscription.savedLink(this);
+		if (link != null && (mService == null || mService.getState() == State.DISABLED))
+		{
+			runImport(link, true);
+		}
+	}
+
+	@Override
+	protected void onDestroy()
+	{
+		super.onDestroy();
+		if (mService != null)
+		{
+			mService.unregisterListener(this);
+		}
+		unbindService(mServiceConnection);
+		mExecutor.shutdown();
+	}
+
+	@Override
+	public void stateChanged()
+	{
+		render();
+	}
+
+	private void scan()
+	{
+		ScanOptions options = new ScanOptions();
+		options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+		options.setPrompt(getString(R.string.tifusi_scan_prompt));
+		options.setBeepEnabled(false);
+		options.setOrientationLocked(false);
+		mScan.launch(options);
+	}
+
+	private void paste()
+	{
+		ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+		ClipData clip = clipboard != null ? clipboard.getPrimaryClip() : null;
+		CharSequence text = clip != null && clip.getItemCount() > 0 ? clip.getItemAt(0).coerceToText(this) : null;
+		importLink(text != null ? text.toString() : "");
+	}
+
+	private void importLink(String text)
+	{
+		if (TifusiSubscription.normalize(text) == null)
+		{
+			mStatus.setText(R.string.tifusi_err_link);
+			return;
+		}
+		runImport(text, false);
+	}
+
+	private void runImport(String link, boolean quiet)
+	{
+		if (mBusy)
+		{
+			return;
+		}
+		mBusy = true;
+		if (!quiet)
+		{
+			mStatus.setText(R.string.tifusi_importing);
+		}
+		mExecutor.execute(() -> {
+			int error = 0;
+			try
+			{
+				TifusiSubscription.refresh(getApplicationContext(), link);
+			}
+			catch (SubscriptionException e)
+			{
+				switch (e.failure)
+				{
+					case NOT_A_LINK:
+						error = R.string.tifusi_err_link;
+						break;
+					case NOT_FOUND:
+						error = R.string.tifusi_err_not_found;
+						break;
+					case NO_IKEV2:
+						error = R.string.tifusi_err_no_ikev2;
+						break;
+					default:
+						error = R.string.tifusi_err_unreachable;
+				}
+			}
+			final int shown = quiet ? 0 : error;
+			mHandler.post(() -> {
+				mBusy = false;
+				render();
+				if (shown != 0)
+				{
+					mStatus.setText(shown);
+				}
+			});
+		});
+	}
+
+	private void toggle()
+	{
+		VpnProfile profile = TifusiSubscription.savedProfile(this);
+		if (profile == null)
+		{
+			scan();
+			return;
+		}
+		if (mService != null && mService.getState() != State.DISABLED)
+		{
+			mService.disconnect();
+			return;
+		}
+		Intent intent = new Intent(this, VpnProfileControlActivity.class);
+		intent.setAction(VpnProfileControlActivity.START_PROFILE);
+		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
+		startActivity(intent);
+	}
+
+	private void render()
+	{
+		boolean ready = TifusiSubscription.savedLink(this) != null;
+		mSetup.setVisibility(ready ? View.GONE : View.VISIBLE);
+		mPower.setVisibility(ready ? View.VISIBLE : View.GONE);
+		if (!ready)
+		{
+			mStatus.setText(R.string.tifusi_first_scan);
+			return;
+		}
+		State state = mService != null ? mService.getState() : State.DISABLED;
+		ErrorState error = mService != null ? mService.getErrorState() : ErrorState.NO_ERROR;
+		mPower.setActivated(state == State.CONNECTED);
+		mPower.setSelected(state == State.CONNECTING);
+		switch (state)
+		{
+			case CONNECTED:
+				mPower.setText(R.string.tifusi_on);
+				mStatus.setText(R.string.tifusi_connected);
+				break;
+			case CONNECTING:
+				mPower.setText(R.string.tifusi_wait);
+				mStatus.setText(error != ErrorState.NO_ERROR ? R.string.tifusi_retrying : R.string.tifusi_connecting);
+				break;
+			case DISCONNECTING:
+				mPower.setText(R.string.tifusi_wait);
+				mStatus.setText(R.string.tifusi_disconnecting);
+				break;
+			default:
+				mPower.setText(R.string.tifusi_off);
+				mStatus.setText(error == ErrorState.AUTH_FAILED ? R.string.tifusi_err_auth :
+								error != ErrorState.NO_ERROR ? R.string.tifusi_err_connect : R.string.tifusi_disconnected);
+		}
+	}
+}

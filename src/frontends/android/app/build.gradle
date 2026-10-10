@@ -4,13 +4,13 @@ android {
     namespace = 'org.strongswan.android'
 
     defaultConfig {
-        applicationId "org.strongswan.android"
+        applicationId "com.tifusi.ike"
         compileSdk = 36
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 36
 
-        versionCode 96
-        versionName "2.6.2"
+        versionCode 1
+        versionName "1.0.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -32,8 +32,20 @@ android {
             options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
 
+    signingConfigs {
+        release {
+            storeFile = System.getenv("TIFUSI_KEYSTORE") ? file(System.getenv("TIFUSI_KEYSTORE")) : null
+            storePassword = System.getenv("TIFUSI_KEYSTORE_PASSWORD")
+            keyAlias = "tifusi"
+            keyPassword = System.getenv("TIFUSI_KEYSTORE_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
+            if (System.getenv("TIFUSI_KEYSTORE")) {
+                signingConfig = signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
@@ -51,6 +63,7 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.assertj:assertj-core:3.27.6'
     testImplementation 'org.mockito:mockito-core:5.20.0'

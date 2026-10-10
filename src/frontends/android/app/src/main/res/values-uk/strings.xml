@@ -16,7 +16,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Application -->
-    <string name="app_name">strongSwan VPN клієнт</string>
     <string name="main_activity_name">strongSwan</string>
     <string name="show_log">Перегляд журналу</string>
     <string name="search">Пошук</string>

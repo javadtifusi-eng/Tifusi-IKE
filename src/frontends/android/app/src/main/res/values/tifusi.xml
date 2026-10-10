@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="tifusi_icon_bg">#FF000000</color>
+    <color name="tifusi_bg">#FF101418</color>
+    <color name="tifusi_on">#FF16A34A</color>
+    <color name="tifusi_wait">#FFD97706</color>
+    <color name="tifusi_off">#FF3F4650</color>
+    <color name="tifusi_text">#FFE5E7EB</color>
+    <color name="tifusi_text_dim">#FF9CA3AF</color>
+
+    <string name="tifusi_on">روشن</string>
+    <string name="tifusi_off">خاموش</string>
+    <string name="tifusi_wait">…</string>
+    <string name="tifusi_connected">وصل است</string>
+    <string name="tifusi_disconnected">برای وصل شدن دکمه را بزنید</string>
+    <string name="tifusi_connecting">در حال وصل شدن…</string>
+    <string name="tifusi_retrying">وصل نشد، دوباره تلاش می‌کند…</string>
+    <string name="tifusi_disconnecting">در حال قطع…</string>
+    <string name="tifusi_first_scan">بارکد اشتراک را اسکن کنید</string>
+    <string name="tifusi_scan">اسکن بارکد</string>
+    <string name="tifusi_paste">یا لینک را کپی کنید و اینجا بزنید</string>
+    <string name="tifusi_scan_prompt">بارکد اشتراک تیفوسی را جلوی دوربین بگیرید</string>
+    <string name="tifusi_importing">در حال دریافت اشتراک…</string>
+    <string name="tifusi_err_link">این لینک اشتراک تیفوسی نیست</string>
+    <string name="tifusi_err_not_found">اشتراک پیدا نشد</string>
+    <string name="tifusi_err_no_ikev2">این اشتراک سرور IKEv2 ندارد</string>
+    <string name="tifusi_err_unreachable">سرور در دسترس نیست، اینترنت را بررسی کنید</string>
+    <string name="tifusi_err_auth">اشتراک تمام شده یا غیرفعال است</string>
+    <string name="tifusi_err_connect">وصل نشد، دوباره بزنید</string>
+</resources>

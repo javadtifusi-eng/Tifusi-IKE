@@ -1,6 +1,9 @@
-name: Android
+name: Tifusi APK
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,32 +17,17 @@ env:
   OS_NAME: linux
 
 jobs:
-  pre-check:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip-check.outputs.should_skip }}
-    steps:
-      - id: skip-check
-        uses: fkirc/skip-duplicate-actions@master
-        with:
-          concurrent_skipping: 'same_content_newer'
-
   android:
-    needs: pre-check
-    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     env:
       TEST: android
-      # since the NDK might be newly installed, we have to use this to avoid cache misses
       CCACHE_COMPILERCHECK: content
     steps:
       - uses: actions/checkout@v4
-      # make sure the NDK we reference is installed and exported so we can use it to build OpenSSL
       - name: Install NDK
         id: ndk-install
         run: |
           NDK_VERSION=$(grep "ndkVersion" src/frontends/android/app/build.gradle | sed -e 's/.*"\(.*\)"/\1/')
-          echo Using NDK ${NDK_VERSION}
           yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${NDK_VERSION}"
           echo "ANDROID_NDK_ROOT=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
@@ -48,7 +36,6 @@ jobs:
           key: ccache-android-${{ github.sha }}
           restore-keys: |
             ccache-android-
-      # necessary for newer versions of the Gradle plugin
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -57,12 +44,21 @@ jobs:
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.TIFUSI_KEYSTORE_B64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/tifusi.jks
+          echo "TIFUSI_KEYSTORE=$RUNNER_TEMP/tifusi.jks" >> $GITHUB_ENV
       - uses: ./.github/actions/default
         env:
           ANDROID_NDK_ROOT: ${{ steps.ndk-install.outputs.ANDROID_NDK_ROOT }}
-      - run: ccache -s
+          TIFUSI_KEYSTORE_PASSWORD: ${{ secrets.TIFUSI_KEYSTORE_PASSWORD }}
+      - run: |
+          V=$(grep versionName src/frontends/android/app/build.gradle | sed -e 's/.*"\(.*\)"/\1/')
+          cp src/frontends/android/app/build/outputs/apk/release/app-release.apk tifusi-$V.apk
+          rm -f $RUNNER_TEMP/tifusi.jks
       - uses: actions/upload-artifact@v4
         with:
-          name: Lint Results
-          path: src/frontends/android/app/build/reports/lint-results*.xml
+          name: tifusi-apk
+          path: tifusi-*.apk

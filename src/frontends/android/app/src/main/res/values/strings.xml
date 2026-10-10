@@ -19,7 +19,7 @@
 <resources>
 
     <!-- Application -->
-    <string name="app_name">strongSwan VPN Client</string>
+    <string name="app_name">Tifusi</string>
     <string name="main_activity_name">strongSwan</string>
     <string name="show_log">View log</string>
     <string name="search">Search</string>

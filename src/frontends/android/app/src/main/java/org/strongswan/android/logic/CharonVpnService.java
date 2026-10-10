@@ -52,7 +52,7 @@ import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
-import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.ui.TifusiActivity;
 import org.strongswan.android.ui.VpnProfileControlActivity;
 import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRange;
@@ -537,7 +537,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			builder.setPublicVersion(buildNotification(true));
 		}
 
-		Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+		Intent intent = new Intent(getApplicationContext(), TifusiActivity.class);
 		PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
 														  flags);
 		builder.setContentIntent(pending);
@@ -849,7 +849,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			/* even though the option displayed in the system dialog says "Configure"
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
-			Intent intent = new Intent(context, MainActivity.class);
+			Intent intent = new Intent(context, TifusiActivity.class);
 			int flags = PendingIntent.FLAG_UPDATE_CURRENT;
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
 			{
