@@ -44,20 +44,13 @@ jobs:
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-      - name: Signing key
-        env:
-          KEYSTORE_B64: ${{ secrets.TIFUSI_KEYSTORE_B64 }}
-        run: |
-          echo "$KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/tifusi.jks
-          echo "TIFUSI_KEYSTORE=$RUNNER_TEMP/tifusi.jks" >> $GITHUB_ENV
       - uses: ./.github/actions/default
         env:
           ANDROID_NDK_ROOT: ${{ steps.ndk-install.outputs.ANDROID_NDK_ROOT }}
-          TIFUSI_KEYSTORE_PASSWORD: ${{ secrets.TIFUSI_KEYSTORE_PASSWORD }}
       - run: |
           V=$(grep versionName src/frontends/android/app/build.gradle | sed -e 's/.*"\(.*\)"/\1/')
-          cp src/frontends/android/app/build/outputs/apk/release/app-release.apk tifusi-$V.apk
-          rm -f $RUNNER_TEMP/tifusi.jks
+          # unsigned: the release key never leaves the build owner's machine
+          cp src/frontends/android/app/build/outputs/apk/release/app-release-unsigned.apk tifusi-$V-unsigned.apk
       - uses: actions/upload-artifact@v4
         with:
           name: tifusi-apk
