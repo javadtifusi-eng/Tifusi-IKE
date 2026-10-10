@@ -20,6 +20,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -100,6 +102,11 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		mUser = findViewById(R.id.tifusi_user);
 		mDays = findViewById(R.id.tifusi_days);
 		mData = findViewById(R.id.tifusi_data);
+		/* brushed silver, like the horses */
+		TextView title = findViewById(R.id.tifusi_title);
+		float size = title.getTextSize();
+		title.getPaint().setShader(new LinearGradient(0, 0, 0, size, new int[]{0xFFFFFFFF, 0xFFB8C9E8, 0xFFFFFFFF, 0xFF7E9CCB},
+													  new float[]{0f, 0.45f, 0.55f, 1f}, Shader.TileMode.CLAMP));
 
 		mPower.setOnClickListener(v -> toggle());
 		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());

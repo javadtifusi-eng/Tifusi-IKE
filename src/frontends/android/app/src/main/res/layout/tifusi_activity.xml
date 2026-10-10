@@ -10,12 +10,34 @@
     android:padding="20dp">
 
     <ImageView
-        android:layout_width="220dp"
+        android:layout_width="230dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="36dp"
         android:adjustViewBounds="true"
         android:contentDescription="@null"
         android:src="@drawable/tifusi_header" />
+
+    <TextView
+        android:id="@+id/tifusi_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.12"
+        android:shadowColor="#AA1E9BFF"
+        android:shadowRadius="14"
+        android:text="TIFUSI"
+        android:textColor="#FFE8F1FF"
+        android:textSize="44sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.45"
+        android:text="VPN CLIENT"
+        android:textColor="#FFB9D4F5"
+        android:textSize="13sp" />
 
     <Space
         android:layout_width="match_parent"
