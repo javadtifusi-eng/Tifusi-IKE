@@ -20,6 +20,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.graphics.LinearGradient;
 import android.graphics.Shader;
 import android.os.Bundle;
@@ -46,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 /**
@@ -65,6 +67,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private TextView mStatus;
 	private View mSetup;
 	private boolean mBusy;
+	/* a link opened while a quiet refresh was running, imported right after it */
+	private String mPending;
 
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
 	{
@@ -118,6 +122,51 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		});
 
 		bindService(new Intent(this, VpnStateService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+		if (savedInstanceState == null)
+		{
+			openLink(getIntent());
+		}
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent)
+	{
+		super.onNewIntent(intent);
+		setIntent(intent);
+		openLink(intent);
+	}
+
+	/**
+	 * tifusi://import?u=<subscription link>, from the "connect" button on the panel's guide page.
+	 * Imported like a scanned QR code; replacing a different subscription asks first, so no random
+	 * web page can quietly move someone onto another server.
+	 */
+	private void openLink(Intent intent)
+	{
+		Uri data = intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) ? intent.getData() : null;
+		if (data == null || !"tifusi".equals(data.getScheme()))
+		{
+			return;
+		}
+		String link = TifusiSubscription.normalize(data.getQueryParameter("u"));
+		if (link == null)
+		{
+			mStatus.setText(R.string.tifusi_err_link);
+			return;
+		}
+		String saved = TifusiSubscription.savedLink(this);
+		/* the same account, maybe on another of the panel's domains */
+		if (saved == null || secretOf(saved).equals(secretOf(link)))
+		{
+			runImport(link, false);
+			return;
+		}
+		new AlertDialog.Builder(this)
+			.setTitle(R.string.tifusi_replace_title)
+			.setMessage(R.string.tifusi_replace_text)
+			.setPositiveButton(R.string.tifusi_replace_ok, (d, w) -> runImport(link, false))
+			.setNegativeButton(android.R.string.cancel, null)
+			.show();
 	}
 
 	@Override
@@ -183,6 +232,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	{
 		if (mBusy)
 		{
+			if (!quiet)
+			{
+				mPending = link;
+			}
 			return;
 		}
 		mBusy = true;
@@ -221,8 +274,19 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 				{
 					mStatus.setText(shown);
 				}
+				if (mPending != null)
+				{
+					String next = mPending;
+					mPending = null;
+					runImport(next, false);
+				}
 			});
 		});
+	}
+
+	private static String secretOf(String link)
+	{
+		return link.substring(link.lastIndexOf("/sub/") + 5);
 	}
 
 	private void toggle()

@@ -36,5 +36,8 @@
     <string name="tifusi_err_no_ikev2">This subscription has no IKEv2 server</string>
     <string name="tifusi_err_unreachable">Server unreachable, check your internet</string>
     <string name="tifusi_err_auth">Subscription expired or disabled</string>
+    <string name="tifusi_replace_title">Replace subscription?</string>
+    <string name="tifusi_replace_text">A link wants to replace your current subscription. Only continue if you got it from your seller.</string>
+    <string name="tifusi_replace_ok">Replace</string>
     <string name="tifusi_err_connect">Could not connect, tap again</string>
 </resources>
