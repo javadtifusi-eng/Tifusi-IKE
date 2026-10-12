@@ -46,6 +46,7 @@
         <activity
             android:name=".ui.TifusiActivity"
             android:label="@string/app_name"
+            android:theme="@style/TifusiTheme"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:exported="true">

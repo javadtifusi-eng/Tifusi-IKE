@@ -2,6 +2,8 @@
 <resources>
     <color name="tifusi_icon_bg">#FF000000</color>
     <color name="tifusi_bg">#FF031546</color>
+    <!-- status and navigation bars: the top colour of the screen, so no bar stands out -->
+    <color name="tifusi_bar">#FF031546</color>
     <color name="tifusi_bg_bottom">#FF02081E</color>
     <color name="tifusi_card">#CC061A4F</color>
     <color name="tifusi_glow">#FF1E9BFF</color>
