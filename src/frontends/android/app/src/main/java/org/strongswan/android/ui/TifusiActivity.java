@@ -35,6 +35,7 @@ import com.journeyapps.barcodescanner.ScanOptions;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.TifusiApkLink;
 import org.strongswan.android.logic.TifusiSubscription;
 import org.strongswan.android.logic.TifusiSubscription.Account;
 import org.strongswan.android.logic.TifusiSubscription.SubscriptionException;
@@ -125,7 +126,35 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		if (savedInstanceState == null)
 		{
 			openLink(getIntent());
+			importFromApk();
 		}
+	}
+
+	/**
+	 * A per-user download from the panel carries its subscription inside the APK: picked up once,
+	 * on the first launch, so a fresh install comes up already set up.
+	 */
+	private void importFromApk()
+	{
+		final String key = "apk_link_checked";
+		android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
+		if (prefs.getBoolean(key, false) || TifusiSubscription.savedLink(this) != null)
+		{
+			return;
+		}
+		prefs.edit().putBoolean(key, true).apply();
+		mExecutor.execute(() -> {
+			String link = TifusiSubscription.normalize(TifusiApkLink.read(getApplicationContext()));
+			if (link != null)
+			{
+				mHandler.post(() -> {
+					if (TifusiSubscription.savedLink(this) == null)
+					{
+						runImport(link, false);
+					}
+				});
+			}
+		});
 	}
 
 	@Override
