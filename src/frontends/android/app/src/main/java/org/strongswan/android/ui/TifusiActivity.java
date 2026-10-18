@@ -412,7 +412,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			}
 			else
 			{
-				mDays.setText(getString(R.string.tifusi_days_left, (int)days));
+				/* English digits, like the GB line, whatever the phone language */
+				mDays.setText(String.format(Locale.US, getString(R.string.tifusi_days_left), (int)days));
 			}
 		}
 		if (account.limit <= 0)
