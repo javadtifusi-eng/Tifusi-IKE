@@ -126,35 +126,51 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		if (savedInstanceState == null)
 		{
 			openLink(getIntent());
-			importFromApk();
 		}
 	}
 
 	/**
-	 * A per-user download from the panel carries its subscription inside the APK: picked up once,
-	 * on the first launch, so a fresh install comes up already set up.
+	 * A per-user download from the panel carries its subscription inside the APK, so a fresh install
+	 * comes up already set up. Tried on every start until a subscription is saved (a failed first
+	 * fetch is retried), and again when a newer APK installed over the app carries another account.
 	 */
 	private void importFromApk()
 	{
-		final String key = "apk_link_checked";
-		android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
-		if (prefs.getBoolean(key, false) || TifusiSubscription.savedLink(this) != null)
-		{
-			return;
-		}
-		prefs.edit().putBoolean(key, true).apply();
 		mExecutor.execute(() -> {
 			String link = TifusiSubscription.normalize(TifusiApkLink.read(getApplicationContext()));
 			if (link != null)
 			{
-				mHandler.post(() -> {
-					if (TifusiSubscription.savedLink(this) == null)
-					{
-						runImport(link, false);
-					}
-				});
+				mHandler.post(() -> offerApkLink(link));
 			}
 		});
+	}
+
+	private void offerApkLink(String link)
+	{
+		final String key = "apk_link_handled";
+		android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
+		String saved = TifusiSubscription.savedLink(this);
+		if (saved == null)
+		{
+			/* an import already running (a tifusi:// link) wins; the next start tries again */
+			if (!mBusy)
+			{
+				runImport(link, false);
+			}
+			return;
+		}
+		/* already this account, or the user already answered for this APK */
+		if (secretOf(saved).equals(secretOf(link)) || link.equals(prefs.getString(key, null)))
+		{
+			return;
+		}
+		prefs.edit().putString(key, link).apply();
+		new AlertDialog.Builder(this)
+			.setTitle(R.string.tifusi_replace_title)
+			.setMessage(R.string.tifusi_replace_text)
+			.setPositiveButton(R.string.tifusi_replace_ok, (d, w) -> runImport(link, false))
+			.setNegativeButton(android.R.string.cancel, null)
+			.show();
 	}
 
 	@Override
@@ -209,6 +225,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		{
 			runImport(link, true);
 		}
+		importFromApk();
 	}
 
 	@Override
