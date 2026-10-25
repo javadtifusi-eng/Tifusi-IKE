@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item><shape android:shape="oval"><solid android:color="#33F59E0B" /></shape></item>
+    <item><shape android:shape="oval"><solid android:color="#33EF4444" /></shape></item>
     <item android:bottom="8dp" android:left="8dp" android:right="8dp" android:top="8dp">
         <shape android:shape="oval"><stroke android:width="5dp" android:color="@color/tifusi_wait" /><solid android:color="#FF04123A" /></shape>
     </item>

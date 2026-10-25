@@ -7,8 +7,8 @@
     <color name="tifusi_bg_bottom">#FF02081E</color>
     <color name="tifusi_card">#CC061A4F</color>
     <color name="tifusi_glow">#FF1E9BFF</color>
-    <color name="tifusi_on">#FF22D3EE</color>
-    <color name="tifusi_wait">#FFF59E0B</color>
+    <color name="tifusi_on">#FF22C55E</color>
+    <color name="tifusi_wait">#FFEF4444</color>
     <color name="tifusi_off">#FF3B5280</color>
     <color name="tifusi_text">#FFFFFFFF</color>
     <color name="tifusi_label">#FF5EEAD4</color>
@@ -52,4 +52,6 @@
     <string name="tifusi_delete">Delete subscription</string>
     <string name="tifusi_delete_text">Remove %s from this device? Your subscription with the seller will stay active.</string>
     <string name="tifusi_disconnect_first">Disconnect the VPN before managing subscriptions</string>
+    <string name="tifusi_gallery">From gallery</string>
+    <string name="tifusi_gallery_error">Could not read a QR code from this image</string>
 </resources>

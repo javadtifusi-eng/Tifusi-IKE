@@ -22,6 +22,14 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.graphics.LinearGradient;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import java.io.InputStream;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.RGBLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
+import androidx.activity.result.contract.ActivityResultContracts;
 import android.graphics.Shader;
 import android.os.Bundle;
 import android.os.Handler;
@@ -98,6 +106,53 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		}
 	});
 
+	private final ActivityResultLauncher<String> mGallery = registerForActivityResult(
+			new ActivityResultContracts.GetContent(), uri -> {
+		if (uri != null) { readGalleryQr(uri); }
+	});
+
+	private void readGalleryQr(Uri uri)
+	{
+		mExecutor.execute(() -> {
+			String link = null;
+			Bitmap bitmap = null;
+			try
+			{
+				BitmapFactory.Options options = new BitmapFactory.Options();
+				options.inJustDecodeBounds = true;
+				try (InputStream stream = getContentResolver().openInputStream(uri)) {
+					BitmapFactory.decodeStream(stream, null, options);
+				}
+				if (options.outWidth <= 0 || options.outHeight <= 0) { throw new IllegalArgumentException(); }
+				options.inSampleSize = 1;
+				while (Math.max(options.outWidth, options.outHeight) / options.inSampleSize > 2048) {
+					options.inSampleSize *= 2;
+				}
+				options.inJustDecodeBounds = false;
+				try (InputStream stream = getContentResolver().openInputStream(uri)) {
+					bitmap = BitmapFactory.decodeStream(stream, null, options);
+				}
+				if (bitmap == null) { throw new IllegalArgumentException(); }
+				int width = bitmap.getWidth(), height = bitmap.getHeight();
+				int[] pixels = new int[width * height];
+				bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+				RGBLuminanceSource source = new RGBLuminanceSource(width, height, pixels);
+				java.util.Map<com.google.zxing.DecodeHintType, Object> hints = new java.util.EnumMap<>(com.google.zxing.DecodeHintType.class);
+				hints.put(com.google.zxing.DecodeHintType.POSSIBLE_FORMATS, java.util.Collections.singletonList(com.google.zxing.BarcodeFormat.QR_CODE));
+				hints.put(com.google.zxing.DecodeHintType.TRY_HARDER, Boolean.TRUE);
+				link = new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(source)), hints).getText();
+			}
+			catch (Exception e) { /* unreadable image or no QR: show a safe, local error */ }
+			finally { if (bitmap != null) { bitmap.recycle(); } }
+			final String result = link;
+			mHandler.post(() -> {
+				if (isFinishing() || isDestroyed()) { return; }
+				if (result == null) { Toast.makeText(this, R.string.tifusi_gallery_error, Toast.LENGTH_LONG).show(); }
+				else { importLink(result); }
+			});
+		});
+	}
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -118,6 +173,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 
 		mPower.setOnClickListener(v -> toggle());
 		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());
+		findViewById(R.id.tifusi_gallery).setOnClickListener(v -> mGallery.launch("image/*"));
 		findViewById(R.id.tifusi_paste).setOnClickListener(v -> paste());
 		findViewById(R.id.tifusi_accounts).setOnClickListener(v -> showAccounts());
 		findViewById(R.id.tifusi_add).setOnClickListener(v -> addSubscription());
