@@ -150,7 +150,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		final String key = "apk_link_handled";
 		android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
 		String saved = TifusiSubscription.savedLink(this);
-		if (link.equals(prefs.getString(key, null))) { return; }
+		if (link.equals(prefs.getString(key, null)) || prefs.getStringSet("removed_accounts", java.util.Collections.emptySet()).contains(Uri.parse(link).getLastPathSegment())) { return; }
 		if (saved == null)
 		{
 			/* an import already running (a tifusi:// link) wins; the next start tries again */
@@ -391,8 +391,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			.setPositiveButton(R.string.tifusi_delete, (d, w) -> {
 				if (!canManage()) { return; }
 				/* Mark a deliberately removed embedded subscription as handled. */
-				getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE).edit()
-					.putString("apk_link_handled", entry.link).apply();
+				android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
+				java.util.Set<String> removed = new java.util.HashSet<>(prefs.getStringSet("removed_accounts", java.util.Collections.emptySet()));
+				removed.add(Uri.parse(entry.link).getLastPathSegment());
+				prefs.edit().putStringSet("removed_accounts", removed).apply();
 				TifusiSubscription.remove(this, entry.link);
 				render();
 			}).setNegativeButton(android.R.string.cancel, null).show();
