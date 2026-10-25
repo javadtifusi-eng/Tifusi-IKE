@@ -18,3 +18,9 @@ Tifusi's own code: `TifusiActivity.java`, `TifusiSubscription.java`, `res/layout
 
 کلاینت IKEv2 تک‌دکمه برای پنل تیفوسی، بر پایه‌ی اپ اندروید strongSwan. یک بار بارکد اشتراک را
 اسکن کنید، بعد فقط خاموش/روشن.
+
+Version 1.0.7 keeps multiple subscriptions on the device. The embedded APK link still imports
+on first launch. Scan QR, Add subscription (typed or pasted link), and Subscriptions stay visible
+after setup. Select an account to connect; disconnect before switching or deleting accounts.
+Deleting removes only the local account and its native VPN profile, never the seller account.
+The original single account migrates with its VPN UUID intact. Existing APKs are not force-updated.

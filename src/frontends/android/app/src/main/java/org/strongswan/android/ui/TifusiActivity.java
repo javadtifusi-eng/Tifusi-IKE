@@ -29,6 +29,10 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.widget.Toast;
+import java.util.List;
+import org.strongswan.android.logic.TifusiSubscription.AccountEntry;
 
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -52,8 +56,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 /**
- * The whole app: scan the panel's subscription QR code once, then one button to turn the VPN on
- * and off. Everything else strongSwan offers stays out of sight.
+ * Subscription selection, QR/link import and one-button VPN control.
  */
 public class TifusiActivity extends AppCompatActivity implements VpnStateService.VpnStateListener
 {
@@ -116,11 +119,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		mPower.setOnClickListener(v -> toggle());
 		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());
 		findViewById(R.id.tifusi_paste).setOnClickListener(v -> paste());
-		/* a new subscription replaces the old one: long-press the status line */
-		mStatus.setOnLongClickListener(v -> {
-			scan();
-			return true;
-		});
+		findViewById(R.id.tifusi_accounts).setOnClickListener(v -> showAccounts());
+		findViewById(R.id.tifusi_add).setOnClickListener(v -> addSubscription());
 
 		bindService(new Intent(this, VpnStateService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
 		if (savedInstanceState == null)
@@ -150,6 +150,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		final String key = "apk_link_handled";
 		android.content.SharedPreferences prefs = getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE);
 		String saved = TifusiSubscription.savedLink(this);
+		if (link.equals(prefs.getString(key, null))) { return; }
 		if (saved == null)
 		{
 			/* an import already running (a tifusi:// link) wins; the next start tries again */
@@ -160,15 +161,15 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			return;
 		}
 		/* already this account, or the user already answered for this APK */
-		if (secretOf(saved).equals(secretOf(link)) || link.equals(prefs.getString(key, null)))
+		if (TifusiSubscription.contains(this, link) || link.equals(prefs.getString(key, null)))
 		{
 			return;
 		}
 		prefs.edit().putString(key, link).apply();
 		new AlertDialog.Builder(this)
-			.setTitle(R.string.tifusi_replace_title)
-			.setMessage(R.string.tifusi_replace_text)
-			.setPositiveButton(R.string.tifusi_replace_ok, (d, w) -> runImport(link, false))
+			.setTitle(R.string.tifusi_add_title)
+			.setMessage(R.string.tifusi_add_text)
+			.setPositiveButton(R.string.tifusi_add_ok, (d, w) -> runImport(link, false))
 			.setNegativeButton(android.R.string.cancel, null)
 			.show();
 	}
@@ -183,8 +184,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 
 	/**
 	 * tifusi://import?u=<subscription link>, from the "connect" button on the panel's guide page.
-	 * Imported like a scanned QR code; replacing a different subscription asks first, so no random
-	 * web page can quietly move someone onto another server.
+	 * Adding another subscription asks first, so a web page cannot silently select another account.
 	 */
 	private void openLink(Intent intent)
 	{
@@ -201,15 +201,15 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		}
 		String saved = TifusiSubscription.savedLink(this);
 		/* the same account, maybe on another of the panel's domains */
-		if (saved == null || secretOf(saved).equals(secretOf(link)))
+		if (saved == null || TifusiSubscription.contains(this, link))
 		{
 			runImport(link, false);
 			return;
 		}
 		new AlertDialog.Builder(this)
-			.setTitle(R.string.tifusi_replace_title)
-			.setMessage(R.string.tifusi_replace_text)
-			.setPositiveButton(R.string.tifusi_replace_ok, (d, w) -> runImport(link, false))
+			.setTitle(R.string.tifusi_add_title)
+			.setMessage(R.string.tifusi_add_text)
+			.setPositiveButton(R.string.tifusi_add_ok, (d, w) -> runImport(link, false))
 			.setNegativeButton(android.R.string.cancel, null)
 			.show();
 	}
@@ -276,6 +276,11 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 
 	private void runImport(String link, boolean quiet)
 	{
+		if (mService != null && mService.getState() != State.DISABLED)
+		{
+			if (!quiet) { Toast.makeText(this, R.string.tifusi_disconnect_first, Toast.LENGTH_SHORT).show(); }
+			return;
+		}
 		if (mBusy)
 		{
 			if (!quiet)
@@ -330,13 +335,72 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		});
 	}
 
-	private static String secretOf(String link)
+	private boolean canManage()
 	{
-		return link.substring(link.lastIndexOf("/sub/") + 5);
+		if (mBusy) { return false; }
+		if (mService == null || mService.getState() != State.DISABLED)
+		{
+			Toast.makeText(this, R.string.tifusi_disconnect_first, Toast.LENGTH_SHORT).show();
+			return false;
+		}
+		return true;
+	}
+
+	private void addSubscription()
+	{
+		if (!canManage()) { return; }
+		EditText input = new EditText(this);
+		input.setSingleLine(true);
+		input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+		input.setHint(R.string.tifusi_link_hint);
+		new AlertDialog.Builder(this).setTitle(R.string.tifusi_add_title).setView(input)
+			.setPositiveButton(R.string.tifusi_add_ok, (d, w) -> importLink(input.getText().toString()))
+			.setNeutralButton(R.string.tifusi_paste_short, (d, w) -> paste())
+			.setNegativeButton(android.R.string.cancel, null).show();
+	}
+
+	private void showAccounts()
+	{
+		if (!canManage()) { return; }
+		List<AccountEntry> entries = TifusiSubscription.accounts(this);
+		String active = TifusiSubscription.savedLink(this);
+		String[] names = new String[entries.size()];
+		for (int i = 0; i < names.length; i++)
+		{
+			AccountEntry e = entries.get(i);
+			names[i] = (e.link.equals(active) ? "✓ " : "") + e.username + " · " + Uri.parse(e.link).getHost();
+		}
+		new AlertDialog.Builder(this).setTitle(R.string.tifusi_accounts).setItems(names, (d, which) -> {
+			AccountEntry entry = entries.get(which);
+			new AlertDialog.Builder(this).setTitle(entry.username)
+				.setPositiveButton(R.string.tifusi_select, (dialog, w) -> {
+					if (!canManage()) { return; }
+					TifusiSubscription.select(this, entry.link);
+					render();
+					runImport(entry.link, true);
+				})
+				.setNeutralButton(R.string.tifusi_delete, (dialog, w) -> confirmDelete(entry))
+				.setNegativeButton(android.R.string.cancel, null).show();
+		}).setNegativeButton(android.R.string.cancel, null).show();
+	}
+
+	private void confirmDelete(AccountEntry entry)
+	{
+		new AlertDialog.Builder(this).setTitle(R.string.tifusi_delete)
+			.setMessage(getString(R.string.tifusi_delete_text, entry.username))
+			.setPositiveButton(R.string.tifusi_delete, (d, w) -> {
+				if (!canManage()) { return; }
+				/* Mark a deliberately removed embedded subscription as handled. */
+				getSharedPreferences("tifusi_apk", Context.MODE_PRIVATE).edit()
+					.putString("apk_link_handled", entry.link).apply();
+				TifusiSubscription.remove(this, entry.link);
+				render();
+			}).setNegativeButton(android.R.string.cancel, null).show();
 	}
 
 	private void toggle()
 	{
+		if (mBusy) { return; }
 		VpnProfile profile = TifusiSubscription.savedProfile(this);
 		if (profile == null)
 		{
@@ -357,7 +421,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private void render()
 	{
 		boolean ready = TifusiSubscription.savedLink(this) != null;
-		mSetup.setVisibility(ready ? View.GONE : View.VISIBLE);
+		mSetup.setVisibility(View.VISIBLE);
+		findViewById(R.id.tifusi_accounts).setVisibility(ready ? View.VISIBLE : View.GONE);
 		mCard.setVisibility(ready ? View.VISIBLE : View.GONE);
 		if (!ready)
 		{

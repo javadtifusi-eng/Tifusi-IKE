@@ -42,4 +42,14 @@
     <string name="tifusi_replace_text">A link wants to replace your current subscription. Only continue if you got it from your seller.</string>
     <string name="tifusi_replace_ok">Replace</string>
     <string name="tifusi_err_connect">Could not connect, tap again</string>
+    <string name="tifusi_accounts">Subscriptions</string>
+    <string name="tifusi_add_title">Add subscription</string>
+    <string name="tifusi_add_text">Add this subscription to your saved accounts? Your existing subscriptions will be kept.</string>
+    <string name="tifusi_add_ok">Add</string>
+    <string name="tifusi_link_hint">Subscription link</string>
+    <string name="tifusi_paste_short">Paste link</string>
+    <string name="tifusi_select">Select</string>
+    <string name="tifusi_delete">Delete subscription</string>
+    <string name="tifusi_delete_text">Remove %s from this device? Your subscription with the seller will stay active.</string>
+    <string name="tifusi_disconnect_first">Disconnect the VPN before managing subscriptions</string>
 </resources>

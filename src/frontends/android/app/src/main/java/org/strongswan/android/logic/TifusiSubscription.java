@@ -154,6 +154,7 @@ public class TifusiSubscription
 	 */
 	public static VpnProfile refresh(Context context, String link) throws SubscriptionException
 	{
+		migrate(context);
 		String canonical = normalize(link);
 		if (canonical == null)
 		{
@@ -167,7 +168,7 @@ public class TifusiSubscription
 			throw new SubscriptionException(Failure.NO_IKEV2);
 		}
 
-		SharedPreferences prefs = prefs(context);
+		SharedPreferences prefs = accountPrefs(context, canonical);
 		SharedPreferences.Editor edit = prefs.edit();
 		/* the panel can move a customer to a new address, follow it */
 		String moved = normalize(config.optString("subscription_url"));
@@ -202,7 +203,8 @@ public class TifusiSubscription
 				source.insertProfile(profile);
 			}
 			edit.putString(KEY_PROFILE, profile.getUUID().toString());
-			edit.apply();
+			edit.commit();
+			register(context, canonical);
 			return profile;
 		}
 		finally
@@ -219,7 +221,7 @@ public class TifusiSubscription
 		{
 			URL url = new URL(canonical);
 			String path = url.getPath();
-			JSONArray backups = new JSONArray(prefs(context).getString(KEY_BACKUPS, "[]"));
+			JSONArray backups = new JSONArray(accountPrefs(context, canonical).getString(KEY_BACKUPS, "[]"));
 			for (int i = 0; i < backups.length(); i++)
 			{
 				candidates.add("https://" + backups.getString(i) + path);
@@ -335,8 +337,114 @@ public class TifusiSubscription
 		return out.toString("UTF-8");
 	}
 
-	private static SharedPreferences prefs(Context context)
+	private static String accountId(String link)
+	{
+		return UUID.nameUUIDFromBytes(link.substring(link.lastIndexOf("/sub/") + 5)
+			.getBytes(StandardCharsets.UTF_8)).toString();
+	}
+
+	private static SharedPreferences rootPrefs(Context context)
 	{
 		return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+	}
+
+	private static SharedPreferences accountPrefs(Context context, String link)
+	{
+		return context.getSharedPreferences(PREFS + "_account_" + accountId(link), Context.MODE_PRIVATE);
+	}
+
+	/** Migrate the original single account once, preserving its native VPN UUID. */
+	private static synchronized void migrate(Context context)
+	{
+		SharedPreferences root = rootPrefs(context);
+		if (root.getBoolean("multi_migrated", false)) { return; }
+		String link = root.getString(KEY_LINK, null);
+		if (normalize(link) != null)
+		{
+			SharedPreferences.Editor e = accountPrefs(context, link).edit();
+			for (String key : new String[]{KEY_LINK, KEY_PROFILE, KEY_BACKUPS, KEY_USERNAME})
+			{ e.putString(key, root.getString(key, null)); }
+			for (String key : new String[]{KEY_EXPIRE, KEY_USED, KEY_LIMIT})
+			{ e.putLong(key, root.getLong(key, 0)); }
+			e.commit();
+			register(context, link);
+		}
+		root.edit().putBoolean("multi_migrated", true).commit();
+	}
+
+	private static synchronized void register(Context context, String link)
+	{
+		SharedPreferences root = rootPrefs(context);
+		java.util.Set<String> ids = new java.util.HashSet<>(root.getStringSet("accounts", java.util.Collections.emptySet()));
+		String id = accountId(link);
+		ids.add(id);
+		root.edit().putStringSet("accounts", ids).putString("active_account", id).commit();
+	}
+
+	public static synchronized List<AccountEntry> accounts(Context context)
+	{
+		migrate(context);
+		List<AccountEntry> entries = new ArrayList<>();
+		for (String id : rootPrefs(context).getStringSet("accounts", java.util.Collections.emptySet()))
+		{
+			SharedPreferences p = context.getSharedPreferences(PREFS + "_account_" + id, Context.MODE_PRIVATE);
+			String link = p.getString(KEY_LINK, null);
+			if (link != null) { entries.add(new AccountEntry(link, p.getString(KEY_USERNAME, "Tifusi"))); }
+		}
+		java.util.Collections.sort(entries, (a, b) -> a.username.compareToIgnoreCase(b.username));
+		return entries;
+	}
+
+	public static class AccountEntry
+	{
+		public final String link;
+		public final String username;
+		AccountEntry(String link, String username) { this.link = link; this.username = username; }
+	}
+
+	public static synchronized boolean contains(Context context, String link)
+	{
+		migrate(context);
+		return rootPrefs(context).getStringSet("accounts", java.util.Collections.emptySet()).contains(accountId(link));
+	}
+
+	public static synchronized void select(Context context, String link)
+	{
+		if (contains(context, link))
+		{ rootPrefs(context).edit().putString("active_account", accountId(link)).commit(); }
+	}
+
+	/** Delete only this local subscription; the seller's account and shared CAs stay intact. */
+	public static synchronized void remove(Context context, String link)
+	{
+		migrate(context);
+		SharedPreferences p = accountPrefs(context, link);
+		String uuid = p.getString(KEY_PROFILE, null);
+		if (uuid != null)
+		{
+			VpnProfileDataSource source = new VpnProfileSource(context).open();
+			try
+			{
+				VpnProfile profile = source.getVpnProfile(UUID.fromString(uuid));
+				if (profile != null) { source.deleteVpnProfile(profile); }
+			}
+			finally { source.close(); }
+		}
+		SharedPreferences root = rootPrefs(context);
+		java.util.Set<String> ids = new java.util.HashSet<>(root.getStringSet("accounts", java.util.Collections.emptySet()));
+		String id = accountId(link);
+		ids.remove(id);
+		SharedPreferences.Editor e = root.edit().putStringSet("accounts", ids);
+		if (id.equals(root.getString("active_account", null)))
+		{ e.putString("active_account", ids.isEmpty() ? null : ids.iterator().next()); }
+		e.commit();
+		p.edit().clear().commit();
+	}
+
+	private static SharedPreferences prefs(Context context)
+	{
+		migrate(context);
+		String id = rootPrefs(context).getString("active_account", null);
+		return context.getSharedPreferences(PREFS + "_account_" + (id != null ? id : "empty"), Context.MODE_PRIVATE);
 	}
 }

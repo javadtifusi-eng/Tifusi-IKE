@@ -567,7 +567,7 @@ android)
 	rm -r strongswan-*
 	cd $SRC_DIR/src/frontends/android
 	echo "$ ./gradlew assembleRelease"
-	NDK_CCACHE=ccache ./gradlew assembleRelease || exit $?
+	NDK_CCACHE=ccache ./gradlew assembleRelease testReleaseUnitTest || exit $?
 	;;
 *)
 	;;

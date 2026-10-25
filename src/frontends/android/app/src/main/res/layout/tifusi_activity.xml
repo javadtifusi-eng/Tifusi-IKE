@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fillViewport="true"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/tifusi_screen_bg"
@@ -9,10 +10,15 @@
     android:orientation="vertical"
     android:padding="20dp">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
     <ImageView
         android:layout_width="230dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="36dp"
+        android:layout_marginTop="16dp"
         android:adjustViewBounds="true"
         android:contentDescription="@null"
         android:src="@drawable/tifusi_header" />
@@ -127,7 +133,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- before the first scan -->
+    <!-- Subscription tools stay available after automatic setup. -->
     <LinearLayout
         android:id="@+id/tifusi_setup"
         android:layout_width="match_parent"
@@ -135,6 +141,18 @@
         android:gravity="center"
         android:orientation="vertical">
 
+        <Button
+            android:id="@+id/tifusi_accounts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tifusi_accounts"
+            android:textAllCaps="false" />
+        <Button
+            android:id="@+id/tifusi_add"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tifusi_add_title"
+            android:textAllCaps="false" />
         <Button
             android:id="@+id/tifusi_scan"
             android:layout_width="match_parent"
@@ -171,3 +189,4 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 </LinearLayout>
+</ScrollView>
