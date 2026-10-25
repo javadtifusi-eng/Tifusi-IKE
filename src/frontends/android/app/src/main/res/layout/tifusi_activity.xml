@@ -15,6 +15,14 @@
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:orientation="vertical">
+    <ImageButton
+        android:id="@+id/tifusi_add"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="end"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/tifusi_ic_add"
+        android:contentDescription="@string/tifusi_add_title" />
     <ImageView
         android:layout_width="230dp"
         android:layout_height="wrap_content"
@@ -147,49 +155,6 @@
             android:layout_height="wrap_content"
             android:text="@string/tifusi_accounts"
             android:textAllCaps="false" />
-        <Button
-            android:id="@+id/tifusi_add"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/tifusi_add_title"
-            android:textAllCaps="false" />
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-        <Button
-            android:id="@+id/tifusi_scan"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="64dp"
-            android:backgroundTint="@color/tifusi_glow"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:text="@string/tifusi_scan" />
-
-        <Button
-            android:id="@+id/tifusi_gallery"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="64dp"
-            android:backgroundTint="@color/tifusi_glow"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:text="@string/tifusi_gallery" />
-
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/tifusi_paste"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textAllCaps="false"
-            android:textColor="@color/tifusi_text_dim"
-            android:text="@string/tifusi_paste" />
     </LinearLayout>
 
     <TextView

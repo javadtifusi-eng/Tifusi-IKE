@@ -172,11 +172,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 													  new float[]{0f, 0.45f, 0.55f, 1f}, Shader.TileMode.CLAMP));
 
 		mPower.setOnClickListener(v -> toggle());
-		findViewById(R.id.tifusi_scan).setOnClickListener(v -> scan());
-		findViewById(R.id.tifusi_gallery).setOnClickListener(v -> mGallery.launch("image/*"));
-		findViewById(R.id.tifusi_paste).setOnClickListener(v -> paste());
 		findViewById(R.id.tifusi_accounts).setOnClickListener(v -> showAccounts());
-		findViewById(R.id.tifusi_add).setOnClickListener(v -> addSubscription());
+		findViewById(R.id.tifusi_add).setOnClickListener(v -> showAddMenu());
 
 		bindService(new Intent(this, VpnStateService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
 		if (savedInstanceState == null)
@@ -402,6 +399,23 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		return true;
 	}
 
+	private void showAddMenu()
+	{
+		CharSequence[] options = {
+			getString(R.string.tifusi_scan), getString(R.string.tifusi_gallery),
+			getString(R.string.tifusi_add_title), getString(R.string.tifusi_paste)
+		};
+		new AlertDialog.Builder(this).setTitle(R.string.tifusi_add_title)
+			.setItems(options, (dialog, which) -> {
+				switch (which) {
+					case 0: scan(); break;
+					case 1: mGallery.launch("image/*"); break;
+					case 2: addSubscription(); break;
+					case 3: paste(); break;
+				}
+			}).setNegativeButton(android.R.string.cancel, null).show();
+	}
+
 	private void addSubscription()
 	{
 		if (!canManage()) { return; }
@@ -462,7 +476,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		VpnProfile profile = TifusiSubscription.savedProfile(this);
 		if (profile == null)
 		{
-			scan();
+			showAddMenu();
 			return;
 		}
 		if (mService != null && mService.getState() != State.DISABLED)
