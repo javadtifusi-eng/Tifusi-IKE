@@ -77,7 +77,6 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private TextView mDays;
 	private TextView mData;
 	private TextView mStatus;
-	private View mSetup;
 	private boolean mBusy;
 	/* a link opened while a quiet refresh was running, imported right after it */
 	private String mPending;
@@ -160,7 +159,6 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		setContentView(R.layout.tifusi_activity);
 		mPower = findViewById(R.id.tifusi_power);
 		mStatus = findViewById(R.id.tifusi_status);
-		mSetup = findViewById(R.id.tifusi_setup);
 		mCard = findViewById(R.id.tifusi_card);
 		mUser = findViewById(R.id.tifusi_user);
 		mDays = findViewById(R.id.tifusi_days);
@@ -172,7 +170,6 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 													  new float[]{0f, 0.45f, 0.55f, 1f}, Shader.TileMode.CLAMP));
 
 		mPower.setOnClickListener(v -> toggle());
-		findViewById(R.id.tifusi_accounts).setOnClickListener(v -> showAccounts());
 		findViewById(R.id.tifusi_add).setOnClickListener(v -> showAddMenu());
 
 		bindService(new Intent(this, VpnStateService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
@@ -403,7 +400,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	{
 		CharSequence[] options = {
 			getString(R.string.tifusi_scan), getString(R.string.tifusi_gallery),
-			getString(R.string.tifusi_add_title), getString(R.string.tifusi_paste)
+			getString(R.string.tifusi_add_title), getString(R.string.tifusi_paste),
+			getString(R.string.tifusi_accounts)
 		};
 		new AlertDialog.Builder(this).setTitle(R.string.tifusi_add_title)
 			.setItems(options, (dialog, which) -> {
@@ -412,6 +410,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 					case 1: mGallery.launch("image/*"); break;
 					case 2: addSubscription(); break;
 					case 3: paste(); break;
+					case 4: showAccounts(); break;
 				}
 			}).setNegativeButton(android.R.string.cancel, null).show();
 	}
@@ -493,8 +492,6 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private void render()
 	{
 		boolean ready = TifusiSubscription.savedLink(this) != null;
-		mSetup.setVisibility(View.VISIBLE);
-		findViewById(R.id.tifusi_accounts).setVisibility(ready ? View.VISIBLE : View.GONE);
 		mCard.setVisibility(ready ? View.VISIBLE : View.GONE);
 		if (!ready)
 		{

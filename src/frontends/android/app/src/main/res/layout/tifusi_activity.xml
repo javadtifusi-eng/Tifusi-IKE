@@ -141,22 +141,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Subscription tools stay available after automatic setup. -->
-    <LinearLayout
-        android:id="@+id/tifusi_setup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical">
-
-        <Button
-            android:id="@+id/tifusi_accounts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/tifusi_accounts"
-            android:textAllCaps="false" />
-    </LinearLayout>
-
     <TextView
         android:id="@+id/tifusi_status"
         android:layout_width="match_parent"
