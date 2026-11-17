@@ -194,6 +194,9 @@ public class TifusiSubscription
 			profile.setUsername(server.optString("username"));
 			profile.setPassword(server.optString("password"));
 			profile.setCertificateAlias(storeSelfSignedCa(server.optString("certificate", null)));
+			/* all traffic through the tunnel: block any IPv4/IPv6 the server does not route
+			 * (otherwise IPv6 leaks around the VPN on dual-stack networks) */
+			profile.setSplitTunneling(VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 | VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6);
 			if (existing != null)
 			{
 				source.updateVpnProfile(profile);
