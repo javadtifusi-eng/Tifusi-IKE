@@ -126,25 +126,9 @@ public class TifusiSubscription
 		return prefs(context).getString(KEY_LINK, null);
 	}
 
-	/**
-	 * The stored profile, or null before the first successful import.
-	 */
-	public static VpnProfile savedProfile(Context context)
+	public static String savedProfileId(Context context)
 	{
-		String uuid = prefs(context).getString(KEY_PROFILE, null);
-		if (uuid == null)
-		{
-			return null;
-		}
-		VpnProfileDataSource source = new VpnProfileSource(context).open();
-		try
-		{
-			return source.getVpnProfile(UUID.fromString(uuid));
-		}
-		finally
-		{
-			source.close();
-		}
+		return prefs(context).getString(KEY_PROFILE, null);
 	}
 
 	/**
@@ -152,7 +136,7 @@ public class TifusiSubscription
 	 * call it off the main thread. Tries the backup domains the panel handed out last time when the
 	 * link's own host does not answer.
 	 */
-	public static VpnProfile refresh(Context context, String link) throws SubscriptionException
+	public static void refresh(Context context, String link, QuietRefresh quiet) throws SubscriptionException
 	{
 		migrate(context);
 		String canonical = normalize(link);
@@ -160,7 +144,8 @@ public class TifusiSubscription
 		{
 			throw new SubscriptionException(Failure.NOT_A_LINK);
 		}
-		JSONObject config = fetch(context, canonical);
+		JSONObject config = fetch(context, canonical, quiet);
+		if (config == null || (quiet != null && !quiet.beginSave())) { return; }
 		JSONArray ikev2 = config.optJSONArray("ikev2");
 		JSONObject server = ikev2 != null ? ikev2.optJSONObject(0) : null;
 		if (server == null || server.optString("server").isEmpty() || server.optString("password").isEmpty())
@@ -208,7 +193,6 @@ public class TifusiSubscription
 			edit.putString(KEY_PROFILE, profile.getUUID().toString());
 			edit.commit();
 			register(context, canonical);
-			return profile;
 		}
 		finally
 		{
@@ -216,7 +200,7 @@ public class TifusiSubscription
 		}
 	}
 
-	private static JSONObject fetch(Context context, String canonical) throws SubscriptionException
+	private static JSONObject fetch(Context context, String canonical, QuietRefresh quiet) throws SubscriptionException
 	{
 		List<String> candidates = new ArrayList<>();
 		candidates.add(canonical);
@@ -238,6 +222,7 @@ public class TifusiSubscription
 		boolean reached = false;
 		for (String base : candidates)
 		{
+			if (quiet != null && quiet.isCancelled()) { return null; }
 			HttpURLConnection conn = null;
 			try
 			{

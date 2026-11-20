@@ -46,7 +46,7 @@ import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
 import org.strongswan.android.R;
-import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.QuietRefresh;
 import org.strongswan.android.logic.TifusiApkLink;
 import org.strongswan.android.logic.TifusiSubscription;
 import org.strongswan.android.logic.TifusiSubscription.Account;
@@ -78,6 +78,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	private TextView mData;
 	private TextView mStatus;
 	private boolean mBusy;
+	private boolean mResumed;
+	private boolean mPowerOnBind;
+	private boolean mConnectAfterSave;
+	private QuietRefresh mQuietRefresh;
 	/* a link opened while a quiet refresh was running, imported right after it */
 	private String mPending;
 
@@ -89,6 +93,15 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			mService = ((VpnStateService.LocalBinder)service).getService();
 			mService.registerListener(TifusiActivity.this);
 			render();
+			if (mPowerOnBind)
+			{
+				mPowerOnBind = false;
+				toggle();
+			}
+			else if (mResumed)
+			{
+				refreshIfDisconnected();
+			}
 		}
 
 		@Override
@@ -268,20 +281,36 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	protected void onResume()
 	{
 		super.onResume();
+		mResumed = true;
 		render();
+		refreshIfDisconnected();
+		importFromApk();
+	}
+
+	private void refreshIfDisconnected()
+	{
 		/* pick up a changed password or server quietly, but never mid-connection */
 		String link = TifusiSubscription.savedLink(this);
-		if (link != null && (mService == null || mService.getState() == State.DISABLED))
+		if (link != null && mService != null && mService.getState() == State.DISABLED)
 		{
 			runImport(link, true);
 		}
-		importFromApk();
+	}
+
+	@Override
+	protected void onPause()
+	{
+		mResumed = false;
+		mPowerOnBind = false;
+		mConnectAfterSave = false;
+		super.onPause();
 	}
 
 	@Override
 	protected void onDestroy()
 	{
 		super.onDestroy();
+		if (mQuietRefresh != null) { mQuietRefresh.cancel(); }
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
@@ -293,6 +322,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 	@Override
 	public void stateChanged()
 	{
+		if (mQuietRefresh != null && mService != null && mService.getState() != State.DISABLED)
+		{
+			mQuietRefresh.cancel();
+		}
 		render();
 	}
 
@@ -340,6 +373,8 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			return;
 		}
 		mBusy = true;
+		final QuietRefresh refresh = quiet ? new QuietRefresh() : null;
+		mQuietRefresh = refresh;
 		if (!quiet)
 		{
 			mStatus.setText(R.string.tifusi_importing);
@@ -348,7 +383,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			int error = 0;
 			try
 			{
-				TifusiSubscription.refresh(getApplicationContext(), link);
+				TifusiSubscription.refresh(getApplicationContext(), link, refresh);
 			}
 			catch (SubscriptionException e)
 			{
@@ -369,7 +404,11 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 			}
 			final int shown = quiet ? 0 : error;
 			mHandler.post(() -> {
+				if (isFinishing() || isDestroyed()) { return; }
 				mBusy = false;
+				mQuietRefresh = null;
+				boolean connect = mConnectAfterSave;
+				mConnectAfterSave = false;
 				render();
 				if (shown != 0)
 				{
@@ -380,6 +419,10 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 					String next = mPending;
 					mPending = null;
 					runImport(next, false);
+				}
+				else if (connect && mService != null && mService.getState() == State.DISABLED)
+				{
+					toggle();
 				}
 			});
 		});
@@ -471,21 +514,41 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 
 	private void toggle()
 	{
-		if (mBusy) { return; }
-		VpnProfile profile = TifusiSubscription.savedProfile(this);
-		if (profile == null)
+		if (mService == null)
+		{
+			mPowerOnBind = true;
+			return;
+		}
+		State state = mService.getState();
+		if (state == State.DISCONNECTING) { return; }
+		if (state != State.DISABLED)
+		{
+			mService.disconnect();
+			mStatus.setText(R.string.tifusi_disconnecting);
+			return;
+		}
+		if (mBusy && (mQuietRefresh == null || mPending != null))
+		{
+			mStatus.setText(R.string.tifusi_importing);
+			return;
+		}
+		if (mQuietRefresh != null && !mQuietRefresh.cancel())
+		{
+			/* Only the local save is left. Consume this tap once it finishes. */
+			mConnectAfterSave = true;
+			mStatus.setText(R.string.tifusi_connecting);
+			return;
+		}
+		String profileId = TifusiSubscription.savedProfileId(this);
+		if (profileId == null)
 		{
 			showAddMenu();
 			return;
 		}
-		if (mService != null && mService.getState() != State.DISABLED)
-		{
-			mService.disconnect();
-			return;
-		}
+		mStatus.setText(R.string.tifusi_connecting);
 		Intent intent = new Intent(this, VpnProfileControlActivity.class);
 		intent.setAction(VpnProfileControlActivity.START_PROFILE);
-		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
+		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profileId);
 		startActivity(intent);
 	}
 
@@ -495,7 +558,7 @@ public class TifusiActivity extends AppCompatActivity implements VpnStateService
 		mCard.setVisibility(ready ? View.VISIBLE : View.GONE);
 		if (!ready)
 		{
-			mStatus.setText(R.string.tifusi_first_scan);
+			mStatus.setText(mBusy ? R.string.tifusi_importing : R.string.tifusi_first_scan);
 			return;
 		}
 		renderAccount();
